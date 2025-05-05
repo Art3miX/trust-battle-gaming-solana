@@ -1,6 +1,3 @@
-pub mod register_game_type;
-pub use register_game_type::*;
-
 pub mod register_game_client;
 pub use register_game_client::*;
 

@@ -14,19 +14,11 @@ declare_id!("2ky84E3Znacsztj8PcLz4fAMtrGJPdTnZVmC64Tq9KgK");
 // TODO: Replace with admin pubkey
 const ADMIN_PUBKEY: Pubkey = pubkey!("2ky84E3Znacsztj8PcLz4fAMtrGJPdTnZVmC64Tq9KgK");
 
-const DEFAULT_TIMEOUT: i64 = 2629800;
+const DEFAULT_RPS_BASIC_TIMEOUT: i64 = 2629800;
 
 #[program]
 pub mod zk_games_solana {
     use super::*;
-
-    pub fn register_game_type(ctx: Context<RegisterGameType>, game_type_id: u32) -> Result<()> {
-        ctx.accounts.game_type.set_inner(GameType {
-            id: game_type_id,
-            bump: ctx.bumps.game_type,
-        });
-        Ok(())
-    }
 
     pub fn register_game_client(
         ctx: Context<RegisterGameClient>,
@@ -49,6 +41,14 @@ pub mod zk_games_solana {
         Ok(())
     }
 
+    pub fn register_player_rps_basic(ctx: Context<RegisterPlayerRpsBasic>) -> Result<()> {
+        ctx.accounts.player_rps_basic.set_inner(RpsBasicPlayer {
+            bump: ctx.bumps.player_rps_basic,
+            ..Default::default()
+        });
+        Ok(())
+    }
+
     pub fn init_rps_basic(
         ctx: Context<InitRpsBasic>,
         init_rps_basic_data: InitRpsBasicData,
@@ -61,7 +61,6 @@ pub mod zk_games_solana {
             },
             player2: None,
             timeout: None,
-            result: None,
             game_client: ctx.accounts.game_client.key(),
             bump: ctx.bumps.rps_basic_game,
         });
@@ -78,7 +77,38 @@ pub mod zk_games_solana {
             choice: join_rps_basic_data.player2_choice,
         });
 
-        game.timeout = Some(Clock::get()?.unix_timestamp + DEFAULT_TIMEOUT);
+        game.timeout = Some(Clock::get()?.unix_timestamp + DEFAULT_RPS_BASIC_TIMEOUT);
+        Ok(())
+    }
+
+    pub fn complete_rps_basic(
+        ctx: Context<CompleteRpsBasic>,
+        complete_rps_basic_data: CompleteRpsBasicData,
+    ) -> Result<()> {
+        // TODO: Verify proof
+        let game = &ctx.accounts.rps_basic_game;
+        let player1_rps = &mut ctx.accounts.player1_rps_basic;
+        let player2_rps = &mut ctx.accounts.player2_rps_basic;
+
+        let player1_choice = complete_rps_basic_data.player1_choice;
+        let player2_choice = game.player2.clone().unwrap().choice;
+
+        let game_result = calculate_result(player1_choice, player2_choice);
+
+        match game_result {
+            GameResult::Player1 => {
+                player1_rps.add_win(player1_choice);
+                player2_rps.add_lose(player2_choice);
+            }
+            GameResult::Player2 => {
+                player1_rps.add_lose(player1_choice);
+                player2_rps.add_win(player2_choice);
+            }
+            GameResult::Draw => {
+                player1_rps.add_draw(player1_choice);
+                player2_rps.add_draw(player2_choice);
+            }
+        }
         Ok(())
     }
 }

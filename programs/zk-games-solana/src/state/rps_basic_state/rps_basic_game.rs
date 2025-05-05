@@ -12,13 +12,6 @@ pub struct Player2Info {
     pub choice: u8,
 }
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize, Clone, InitSpace)]
-pub enum GameResult {
-    Player1,
-    Player2,
-    Draw,
-}
-
 #[account]
 #[derive(InitSpace)]
 pub struct RpsBasicGame {
@@ -26,7 +19,6 @@ pub struct RpsBasicGame {
     pub player1: Player1Info,
     pub player2: Option<Player2Info>,
     pub timeout: Option<i64>,
-    pub result: Option<GameResult>,
     pub game_client: Pubkey,
     pub bump: u8,
 }
