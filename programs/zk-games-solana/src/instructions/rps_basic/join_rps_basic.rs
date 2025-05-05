@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{errors::MyError, GameClient, Player, RpsBasicGame};
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct JoinRpsBasicData {
     pub player2_choice: u8,
 }

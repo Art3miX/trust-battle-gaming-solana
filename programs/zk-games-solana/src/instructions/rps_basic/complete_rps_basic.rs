@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{errors::MyError, GameClient, Player, RpsBasicGame, RpsBasicPlayer};
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct CompleteRpsBasicData {
     pub player1_choice: u8,
     // TODO: Add proof here

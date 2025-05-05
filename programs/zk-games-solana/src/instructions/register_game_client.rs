@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{GameClient, ADMIN_PUBKEY};
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct GameClientData {
     pub name: String,
     pub signer: Pubkey,

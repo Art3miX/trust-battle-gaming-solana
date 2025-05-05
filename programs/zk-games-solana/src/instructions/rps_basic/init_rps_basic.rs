@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{GameClient, Player, RpsBasicGame};
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct InitRpsBasicData {
     pub id: u64,
     pub choice_hash: [u8; 32],

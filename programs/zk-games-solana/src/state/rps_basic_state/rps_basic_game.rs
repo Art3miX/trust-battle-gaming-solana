@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize, Clone, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub struct Player1Info {
     pub key: Pubkey,
     pub choice_hash: [u8; 32],
 }
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize, Clone, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub struct Player2Info {
     pub key: Pubkey,
     pub choice: u8,

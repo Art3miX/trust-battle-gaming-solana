@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{GameClient, Player};
 
-#[derive(borsh::BorshDeserialize, borsh::BorshSerialize)]
+#[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct PlayerData {
     pub username: String,
     pub login_hash: [u8; 32],
