@@ -12,6 +12,7 @@ pub struct JoinRpsBasic<'info> {
     #[account(mut)]
     signer: Signer<'info>,
     #[account(
+        mut,
         seeds=[
             "rps_basic_game".as_bytes(),
             rps_basic_game.game_client.key().as_ref(),
@@ -42,7 +43,7 @@ pub struct JoinRpsBasic<'info> {
     #[account(
         seeds=[
             "game_client".as_bytes(),
-            &signer.key().to_bytes()
+            &game_client.signer.key().to_bytes()
         ],
         bump = game_client.bump,
         has_one = signer,

@@ -2,6 +2,9 @@ use anchor_lang::error_code;
 
 #[error_code]
 pub enum MyError {
+    #[msg("Signer must be a registered game client")]
+    SignerMustBeGameClient,
+
     #[msg("Player2 cannot be the same as Player1")]
     RpsBasicSamePlayer,
 

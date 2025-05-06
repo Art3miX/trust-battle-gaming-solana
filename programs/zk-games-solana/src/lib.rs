@@ -12,7 +12,7 @@ pub use state::*;
 declare_id!("2ky84E3Znacsztj8PcLz4fAMtrGJPdTnZVmC64Tq9KgK");
 
 // TODO: Replace with admin pubkey
-const ADMIN_PUBKEY: Pubkey = pubkey!("2ky84E3Znacsztj8PcLz4fAMtrGJPdTnZVmC64Tq9KgK");
+const ADMIN_PUBKEY: Pubkey = pubkey!("3xoJZkhxuzKpKATL7UhskTA17uBuEnMeuLAqhovETHg4");
 
 const DEFAULT_RPS_BASIC_TIMEOUT: i64 = 2629800;
 

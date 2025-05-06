@@ -35,6 +35,7 @@ pub struct CompleteRpsBasic<'info> {
     )]
     pub player1: Account<'info, Player>,
     #[account(
+        mut,
         seeds = [
             "rps_basic_player".as_bytes(),
             player1.username.as_bytes()
@@ -51,6 +52,7 @@ pub struct CompleteRpsBasic<'info> {
     )]
     pub player2: Account<'info, Player>,
     #[account(
+        mut,
         seeds = [
             "rps_basic_player".as_bytes(),
             player2.username.as_bytes()

@@ -28,7 +28,7 @@ pub struct RegisterPlayerRpsBasic<'info> {
     #[account(
         seeds=[
             "game_client".as_bytes(),
-            &signer.key().to_bytes()
+            &game_client.signer.key().to_bytes()
         ],
         bump = game_client.bump,
         has_one = signer,

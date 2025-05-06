@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{GameClient, Player};
+use crate::{errors::MyError, GameClient, Player};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct PlayerData {
@@ -27,10 +27,10 @@ pub struct RegisterPlayer<'info> {
     #[account(
         seeds=[
             "game_client".as_bytes(),
-            &signer.key().to_bytes()
+            &game_client.signer.to_bytes()
         ],
         bump = game_client.bump,
-        has_one = signer,
+        has_one = signer @ MyError::SignerMustBeGameClient,
     )]
     game_client: Account<'info, GameClient>,
     system_program: Program<'info, System>,
