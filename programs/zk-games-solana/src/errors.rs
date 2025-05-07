@@ -19,4 +19,7 @@ pub enum MyError {
 
     #[msg("No one joined this game yet")]
     RpsBasicGameNotJoined,
+
+    #[msg("Proof verification failed")]
+    RpsBasicProofVerify,
 }

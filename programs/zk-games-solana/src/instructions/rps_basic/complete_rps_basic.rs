@@ -4,8 +4,8 @@ use crate::{errors::MyError, GameClient, Player, RpsBasicGame, RpsBasicPlayer};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct CompleteRpsBasicData {
+    pub proof: Vec<u8>,
     pub player1_choice: u8,
-    // TODO: Add proof here
 }
 
 #[derive(Accounts)]
@@ -68,6 +68,6 @@ pub struct CompleteRpsBasic<'info> {
         bump = game_client.bump,
         has_one = signer,
     )]
-    game_client: Account<'info, GameClient>,
+    pub game_client: Account<'info, GameClient>,
     system_program: Program<'info, System>,
 }
