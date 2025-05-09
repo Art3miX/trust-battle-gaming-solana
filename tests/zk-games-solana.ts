@@ -1,3 +1,4 @@
+import {publicKey} from "@coral-xyz/anchor/dist/cjs/utils";
 import * as anchor from "@coral-xyz/anchor";
 import {BN, Program} from "@coral-xyz/anchor";
 import {ZkGamesSolana} from "../target/types/zk_games_solana";
@@ -88,8 +89,12 @@ describe("zk-games-solana", () => {
   let gameClientPda: PublicKey;
   let player1Pda: PublicKey;
   let player1PdaAta: PublicKey;
+  let player1RpsBasicPda: PublicKey;
   let player2Pda: PublicKey;
   let player2PdaAta: PublicKey;
+  let player2RpsBasicPda: PublicKey;
+  let gameClientAta: PublicKey;
+  let platformAta: PublicKey;
 
   before(async () => {
     await anchor
@@ -229,19 +234,23 @@ describe("zk-games-solana", () => {
     );
 
     // create platformAcc and gameClient signer ATAs
-    await getOrCreateAssociatedTokenAccount(
-      anchor.getProvider().connection,
-      admin,
-      usdcMint,
-      platformAcc.publicKey
-    );
+    platformAta = (
+      await getOrCreateAssociatedTokenAccount(
+        anchor.getProvider().connection,
+        admin,
+        usdcMint,
+        platformAcc.publicKey
+      )
+    ).address;
 
-    await getOrCreateAssociatedTokenAccount(
-      anchor.getProvider().connection,
-      admin,
-      usdcMint,
-      gameClient.publicKey
-    );
+    gameClientAta = (
+      await getOrCreateAssociatedTokenAccount(
+        anchor.getProvider().connection,
+        admin,
+        usdcMint,
+        gameClient.publicKey
+      )
+    ).address;
   });
 
   it("Game client was created", async () => {
@@ -290,10 +299,10 @@ describe("zk-games-solana", () => {
       .signers([gameClient])
       .rpc();
 
-    let [player1RpsBasicPda] = PublicKey.findProgramAddressSync(
+    player1RpsBasicPda = PublicKey.findProgramAddressSync(
       [Buffer.from("rps_basic_player"), Buffer.from(PLAYER1_USERNAME)],
       program.programId
-    );
+    )[0];
 
     // Register player2 to rps_basic
     await program.methods
@@ -306,15 +315,15 @@ describe("zk-games-solana", () => {
       .signers([gameClient])
       .rpc();
 
-    let [player2RpsBasicPda] = PublicKey.findProgramAddressSync(
+    player2RpsBasicPda = PublicKey.findProgramAddressSync(
       [Buffer.from("rps_basic_player"), Buffer.from(PLAYER2_USERNAME)],
       program.programId
-    );
+    )[0];
 
     // Player1 starts a new game
     // Generate choice hash
     let choice_hash = createHash("sha256")
-      .update(Buffer.from(TEST_SECRET)) // TODO: get secret
+      .update(Buffer.from(TEST_SECRET))
       .update(gameClientPda.toString())
       .update(gameId.toString())
       .update(player1Choice.toString())
@@ -482,6 +491,131 @@ describe("zk-games-solana", () => {
     assert(
       parseInt(player2AtaBalanace) < INIT_PLAYER_BAL.toNumber(),
       "Player1 balance is incorrect"
+    );
+
+    // Confirm platform and client got their fee
+    let fee = MIN_AMOUNT.mul(new BN(2)).mul(new BN(50)).div(new BN(10000));
+
+    let clientAtaBalanace = (
+      await anchor
+        .getProvider()
+        .connection.getTokenAccountBalance(gameClientAta)
+    ).value.amount;
+
+    let platformAtaBalanace = (
+      await anchor.getProvider().connection.getTokenAccountBalance(platformAta)
+    ).value.amount;
+
+    // confirm platform and client ata holds the exact fee amount (only 1 game was paid)
+    assert(
+      parseInt(clientAtaBalanace) === fee.toNumber(),
+      "Client doesn't hold fee amount"
+    );
+    assert(
+      parseInt(platformAtaBalanace) === fee.toNumber(),
+      "Platform doesn't hold fee amount"
+    );
+  });
+
+  it("Cancel game", async () => {
+    let gameId = new BN(0);
+    let player1Choice = 1;
+
+    let player1PdaAtaBalanaceInit = parseInt(
+      (
+        await anchor
+          .getProvider()
+          .connection.getTokenAccountBalance(player1PdaAta)
+      ).value.amount
+    );
+
+    let gameClientAtaBalanaceInit = parseInt(
+      (
+        await anchor
+          .getProvider()
+          .connection.getTokenAccountBalance(gameClientAta)
+      ).value.amount
+    );
+
+    let choice_hash = createHash("sha256")
+      .update(Buffer.from(TEST_SECRET))
+      .update(gameClientPda.toString())
+      .update(gameId.toString())
+      .update(player1Choice.toString())
+      .digest();
+
+    // Start new game to cancel later
+    await program.methods
+      .initRpsBasic({
+        id: gameId,
+        amount: MIN_AMOUNT,
+        choiceHash: Array.from(choice_hash),
+      })
+      .accounts({
+        signer: gameClient.publicKey,
+        player1: player1Pda,
+        gameClient: gameClientPda,
+        usdcMint,
+        manager: managerPda,
+        vault,
+      })
+      .signers([gameClient])
+      .rpc();
+
+    let [gamePda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("rps_basic_game"),
+        gameClientPda.toBuffer(),
+        gameId.toBuffer("le", 8),
+      ],
+      program.programId
+    );
+
+    // Cancle game
+    await program.methods
+      .cancelRpsBasic()
+      .accounts({
+        signer: gameClient.publicKey,
+        rpsBasicGame: gamePda,
+        player1: player1Pda,
+        player1RpsBasic: player1RpsBasicPda,
+        gameClient: gameClientPda,
+        usdcMint,
+        manager: managerPda,
+        vault,
+      })
+      .signers([gameClient])
+      .rpc();
+
+    let fee = MIN_AMOUNT.mul(new BN(50)).div(new BN(10000));
+
+    let player1PdaAtaBalanace = (
+      await anchor
+        .getProvider()
+        .connection.getTokenAccountBalance(player1PdaAta)
+    ).value.amount;
+
+    // Confirm we are back to initial player balance minus the fee
+    assert(
+      parseInt(player1PdaAtaBalanace) ===
+        player1PdaAtaBalanaceInit - fee.toNumber(),
+      "Player1 doens't have correct funds"
+    );
+
+    let gameClientAtaBalanace = (
+      await anchor
+        .getProvider()
+        .connection.getTokenAccountBalance(gameClientAta)
+    ).value.amount;
+
+    console.log(
+      gameClientAtaBalanace,
+      gameClientAtaBalanaceInit + fee.toNumber()
+    );
+    assert(
+      parseInt(gameClientAtaBalanace) ===
+        gameClientAtaBalanaceInit + fee.toNumber(),
+      "Client doesn't hold fee amount"
     );
   });
 });

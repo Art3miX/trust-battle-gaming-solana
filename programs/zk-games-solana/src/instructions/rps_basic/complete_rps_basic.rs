@@ -120,7 +120,7 @@ pub struct CompleteRpsBasic<'info> {
     system_program: Program<'info, System>,
 }
 
-impl CompleteRpsBasic<'_> {
+impl<'info> CompleteRpsBasic<'info> {
     pub fn complete_rps_basic(&mut self, complete_game_data: CompleteRpsBasicData) -> Result<()> {
         let vk = sp1_solana::GROTH16_VK_4_0_0_RC3_BYTES;
         let game = &self.rps_basic_game;
@@ -146,8 +146,8 @@ impl CompleteRpsBasic<'_> {
             MyError::RpsBasicProofVerify
         })?;
 
-        let player1_rps = &mut self.player1_rps_basic;
-        let player2_rps = &mut self.player2_rps_basic;
+        // let player1_rps = &mut self.player1_rps_basic;
+        // let player2_rps = &mut self.player2_rps_basic;
 
         let player1_choice = complete_game_data.player1_choice;
         let player2_choice = game
@@ -166,63 +166,26 @@ impl CompleteRpsBasic<'_> {
             self.manager.platform_fee,
         );
 
-        let manager_pda_seeds = &["manager".as_bytes(), &[self.manager.bump]];
-        let manager_pda_seeds = &[&manager_pda_seeds[..]];
-
         // Transfer platform fee
-        let cpi_accounts = TransferChecked {
-            mint: self.usdc_mint.to_account_info(),
-            from: self.vault.to_account_info(),
-            to: self.platform_ata.to_account_info(),
-            authority: self.manager.to_account_info(),
-        };
-        let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
-        transfer_checked(cpi_context, platform_amount, self.usdc_mint.decimals)?;
+        self.transfer_from_vault(self.platform_ata.clone(), platform_amount)?;
 
         // Transfer client fee
-        let cpi_accounts = TransferChecked {
-            mint: self.usdc_mint.to_account_info(),
-            from: self.vault.to_account_info(),
-            to: self.game_client_ata.to_account_info(),
-            authority: self.manager.to_account_info(),
-        };
-        let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
-        transfer_checked(cpi_context, client_amount, self.usdc_mint.decimals)?;
+        self.transfer_from_vault(self.game_client_ata.clone(), client_amount)?;
 
         match game_result {
             GameResult::Player1 => {
                 // Transfer winning amount to player1
-                let cpi_accounts = TransferChecked {
-                    mint: self.usdc_mint.to_account_info(),
-                    from: self.vault.to_account_info(),
-                    to: self.player1_ata.to_account_info(),
-                    authority: self.manager.to_account_info(),
-                };
-                let cpi_program = self.token_program.to_account_info();
-                let cpi_context =
-                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
-                transfer_checked(cpi_context, winning_amount, self.usdc_mint.decimals)?;
+                self.transfer_from_vault(self.player1_ata.clone(), winning_amount)?;
 
-                player1_rps.add_win(player1_choice);
-                player2_rps.add_lose(player2_choice);
+                self.player1_rps_basic.add_win(player1_choice);
+                self.player2_rps_basic.add_lose(player2_choice);
             }
             GameResult::Player2 => {
                 // Transfer winning amount to player2
-                let cpi_accounts = TransferChecked {
-                    mint: self.usdc_mint.to_account_info(),
-                    from: self.vault.to_account_info(),
-                    to: self.player2_ata.to_account_info(),
-                    authority: self.manager.to_account_info(),
-                };
-                let cpi_program = self.token_program.to_account_info();
-                let cpi_context =
-                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
-                transfer_checked(cpi_context, winning_amount, self.usdc_mint.decimals)?;
+                self.transfer_from_vault(self.player2_ata.clone(), winning_amount)?;
 
-                player1_rps.add_lose(player1_choice);
-                player2_rps.add_win(player2_choice);
+                self.player1_rps_basic.add_lose(player1_choice);
+                self.player2_rps_basic.add_win(player2_choice);
             }
             GameResult::Draw => {
                 // TODO: Create rematch logic
@@ -231,33 +194,33 @@ impl CompleteRpsBasic<'_> {
                     .checked_div(2)
                     .expect("Split winning amount zero");
 
-                let cpi_accounts = TransferChecked {
-                    mint: self.usdc_mint.to_account_info(),
-                    from: self.vault.to_account_info(),
-                    to: self.player1_ata.to_account_info(),
-                    authority: self.manager.to_account_info(),
-                };
-                let cpi_program = self.token_program.to_account_info();
-                let cpi_context =
-                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
-                transfer_checked(cpi_context, split_amount, self.usdc_mint.decimals)?;
+                self.transfer_from_vault(self.player1_ata.clone(), split_amount)?;
+                self.transfer_from_vault(self.player2_ata.clone(), split_amount)?;
 
-                let cpi_accounts = TransferChecked {
-                    mint: self.usdc_mint.to_account_info(),
-                    from: self.vault.to_account_info(),
-                    to: self.player2_ata.to_account_info(),
-                    authority: self.manager.to_account_info(),
-                };
-                let cpi_program = self.token_program.to_account_info();
-                let cpi_context =
-                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
-                transfer_checked(cpi_context, split_amount, self.usdc_mint.decimals)?;
-
-                player1_rps.add_draw(player1_choice);
-                player2_rps.add_draw(player2_choice);
+                self.player1_rps_basic.add_draw(player1_choice);
+                self.player2_rps_basic.add_draw(player2_choice);
             }
         }
 
         Ok(())
+    }
+
+    fn transfer_from_vault(
+        &mut self,
+        acc_info: InterfaceAccount<'info, TokenAccount>,
+        amount: u64,
+    ) -> Result<()> {
+        let manager_pda_seeds = &["manager".as_bytes(), &[self.manager.bump]];
+        let manager_pda_seeds = &[&manager_pda_seeds[..]];
+
+        let cpi_accounts = TransferChecked {
+            mint: self.usdc_mint.to_account_info(),
+            from: self.vault.to_account_info(),
+            to: acc_info.to_account_info(),
+            authority: self.manager.to_account_info(),
+        };
+        let cpi_program = self.token_program.to_account_info();
+        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
+        transfer_checked(cpi_context, amount, self.usdc_mint.decimals)
     }
 }

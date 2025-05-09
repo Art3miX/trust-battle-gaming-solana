@@ -85,6 +85,9 @@ impl CancelRpsBasic<'_> {
     pub fn cancel_rps_basic(&mut self) -> Result<()> {
         let game = &self.rps_basic_game;
 
+        let manager_pda_seeds = &["manager".as_bytes(), &[self.manager.bump]];
+        let manager_pda_seeds = &[&manager_pda_seeds[..]];
+
         // calculate fee
         let (send_amount, client_amount, _) =
             calculate_fee(game.amount, self.manager.client_fee, 0);
@@ -97,7 +100,7 @@ impl CancelRpsBasic<'_> {
             authority: self.manager.to_account_info(),
         };
         let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
         transfer_checked(cpi_context, client_amount, self.usdc_mint.decimals)?;
 
         // Transfer to player1
@@ -108,7 +111,7 @@ impl CancelRpsBasic<'_> {
             authority: self.manager.to_account_info(),
         };
         let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
         transfer_checked(cpi_context, send_amount, self.usdc_mint.decimals)?;
 
         let player1_rps_basic = &mut self.player1_rps_basic;
