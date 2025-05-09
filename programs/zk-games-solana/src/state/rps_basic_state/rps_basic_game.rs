@@ -16,6 +16,7 @@ pub struct Player2Info {
 #[derive(InitSpace)]
 pub struct RpsBasicGame {
     pub id: u64,
+    pub amount: u64,
     pub player1: Player1Info,
     pub player2: Option<Player2Info>,
     pub timeout: Option<i64>,

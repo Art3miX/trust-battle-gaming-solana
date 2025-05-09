@@ -1,3 +1,6 @@
+pub mod manager;
+pub use manager::*;
+
 pub mod game_client;
 pub use game_client::*;
 

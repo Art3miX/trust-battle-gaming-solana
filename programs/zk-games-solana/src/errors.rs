@@ -22,4 +22,7 @@ pub enum MyError {
 
     #[msg("Proof verification failed")]
     RpsBasicProofVerify,
+
+    #[msg("Amount is too low")]
+    RpsBasicAmountTooLow,
 }

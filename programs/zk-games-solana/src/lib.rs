@@ -28,6 +28,10 @@ pub mod zk_games_solana {
 
     use super::*;
 
+    pub fn init(ctx: Context<Init>, init_data: InitData) -> Result<()> {
+        ctx.accounts.init(init_data, ctx.bumps.manager)
+    }
+
     pub fn register_game_client(
         ctx: Context<RegisterGameClient>,
         game_client_data: GameClientData,
@@ -61,32 +65,15 @@ pub mod zk_games_solana {
         ctx: Context<InitRpsBasic>,
         init_rps_basic_data: InitRpsBasicData,
     ) -> Result<()> {
-        ctx.accounts.rps_basic_game.set_inner(RpsBasicGame {
-            id: init_rps_basic_data.id,
-            player1: Player1Info {
-                key: ctx.accounts.player1.key(),
-                choice_hash: init_rps_basic_data.choice_hash,
-            },
-            player2: None,
-            timeout: None,
-            game_client: ctx.accounts.game_client.key(),
-            bump: ctx.bumps.rps_basic_game,
-        });
-        Ok(())
+        ctx.accounts
+            .init_rps_basic(init_rps_basic_data, ctx.bumps.rps_basic_game)
     }
 
     pub fn join_rps_basic(
         ctx: Context<JoinRpsBasic>,
         join_rps_basic_data: JoinRpsBasicData,
     ) -> Result<()> {
-        let game = &mut ctx.accounts.rps_basic_game;
-        game.player2 = Some(Player2Info {
-            key: ctx.accounts.player2.key(),
-            choice: join_rps_basic_data.player2_choice,
-        });
-
-        game.timeout = Some(Clock::get()?.unix_timestamp + DEFAULT_RPS_BASIC_TIMEOUT);
-        Ok(())
+        ctx.accounts.join_rps_basic(join_rps_basic_data)
     }
 
     pub fn complete_rps_basic(
