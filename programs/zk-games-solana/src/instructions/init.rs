@@ -31,7 +31,6 @@ pub struct Init<'info> {
         bump
     )]
     pub manager: Account<'info, Manager>,
-    #[account(address = manager.usdc_mint)]
     pub usdc_mint: InterfaceAccount<'info, Mint>,
     #[account(
         init,
@@ -45,7 +44,7 @@ pub struct Init<'info> {
     system_program: Program<'info, System>,
 }
 
-impl<'info> Init<'info> {
+impl Init<'_> {
     pub fn init(&mut self, init_data: InitData, bump: u8) -> Result<()> {
         self.manager.set_inner(Manager {
             client_fee: init_data.client_fee_bps,

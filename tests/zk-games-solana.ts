@@ -11,6 +11,13 @@ import {
 import * as bip39 from "bip39";
 import {assert} from "chai";
 import {createHash} from "crypto";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createMint,
+  getOrCreateAssociatedTokenAccount,
+  mintTo,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 const TEST_SEED =
   "vague parrot cook twelve fan flush curve web coffee pet angry mammal";
@@ -59,6 +66,9 @@ const PROOF_P1_G0_C1 = [
   5, 134, 204, 248, 141,
 ];
 
+const MIN_AMOUNT = new BN(1_000_000);
+const INIT_PLAYER_BAL = MIN_AMOUNT.mul(new BN(5));
+
 describe("zk-games-solana", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -68,10 +78,18 @@ describe("zk-games-solana", () => {
   const admin = Keypair.fromSeed(adminSeed.subarray(0, 32));
   const gameClientSeed = bip39.mnemonicToSeedSync(TEST_SEED, "12345");
   const gameClient = Keypair.fromSeed(gameClientSeed.subarray(0, 32));
+  const platformAccSeed = bip39.mnemonicToSeedSync(TEST_SEED, "123456");
+  const platformAcc = Keypair.fromSeed(platformAccSeed.subarray(0, 32));
+
+  let managerPda: PublicKey;
+  let vault: PublicKey;
+  let usdcMint: PublicKey;
 
   let gameClientPda: PublicKey;
   let player1Pda: PublicKey;
+  let player1PdaAta: PublicKey;
   let player2Pda: PublicKey;
+  let player2PdaAta: PublicKey;
 
   before(async () => {
     await anchor
@@ -81,7 +99,44 @@ describe("zk-games-solana", () => {
       .getProvider()
       .connection.requestAirdrop(gameClient.publicKey, LAMPORTS_PER_SOL * 1000);
 
-    // Increase max CU for proving
+    // Create usdc_mint
+    usdcMint = await createMint(
+      anchor.getProvider().connection,
+      admin,
+      admin.publicKey,
+      admin.publicKey,
+      6
+    );
+
+    // Init program
+    await program.methods
+      .init({
+        clientFeeBps: 50, // 0.5%
+        platformFeeBps: 50, // 0.5%
+        platformKey: platformAcc.publicKey,
+      })
+      .accounts({
+        admin: admin.publicKey,
+        usdcMint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([admin])
+      .rpc();
+
+    managerPda = PublicKey.findProgramAddressSync(
+      [Buffer.from("manager")],
+      program.programId
+    )[0];
+
+    vault = (
+      await getOrCreateAssociatedTokenAccount(
+        anchor.getProvider().connection,
+        admin,
+        usdcMint,
+        managerPda,
+        true
+      )
+    ).address;
 
     // Add game client
     await program.methods
@@ -116,6 +171,16 @@ describe("zk-games-solana", () => {
       program.programId
     )[0];
 
+    player1PdaAta = (
+      await getOrCreateAssociatedTokenAccount(
+        anchor.getProvider().connection,
+        admin,
+        usdcMint,
+        player1Pda,
+        true
+      )
+    ).address;
+
     // Create player2
     await program.methods
       .registerPlayer({
@@ -133,6 +198,50 @@ describe("zk-games-solana", () => {
       [Buffer.from("player"), Buffer.from(PLAYER2_USERNAME)],
       program.programId
     )[0];
+
+    player2PdaAta = (
+      await getOrCreateAssociatedTokenAccount(
+        anchor.getProvider().connection,
+        admin,
+        usdcMint,
+        player2Pda,
+        true
+      )
+    ).address;
+
+    // Fund players to bet
+    await mintTo(
+      anchor.getProvider().connection,
+      admin,
+      usdcMint,
+      player1PdaAta,
+      admin,
+      INIT_PLAYER_BAL.toNumber()
+    );
+
+    await mintTo(
+      anchor.getProvider().connection,
+      admin,
+      usdcMint,
+      player2PdaAta,
+      admin,
+      INIT_PLAYER_BAL.toNumber()
+    );
+
+    // create platformAcc and gameClient signer ATAs
+    await getOrCreateAssociatedTokenAccount(
+      anchor.getProvider().connection,
+      admin,
+      usdcMint,
+      platformAcc.publicKey
+    );
+
+    await getOrCreateAssociatedTokenAccount(
+      anchor.getProvider().connection,
+      admin,
+      usdcMint,
+      gameClient.publicKey
+    );
   });
 
   it("Game client was created", async () => {
@@ -214,12 +323,16 @@ describe("zk-games-solana", () => {
     await program.methods
       .initRpsBasic({
         id: gameId,
+        amount: MIN_AMOUNT,
         choiceHash: Array.from(choice_hash),
       })
       .accounts({
         signer: gameClient.publicKey,
         player1: player1Pda,
         gameClient: gameClientPda,
+        usdcMint,
+        manager: managerPda,
+        vault,
       })
       .signers([gameClient])
       .rpc();
@@ -247,6 +360,9 @@ describe("zk-games-solana", () => {
         player1: player1Pda,
         player2: player2Pda,
         gameClient: gameClientPda,
+        usdcMint,
+        manager: managerPda,
+        vault,
       })
       .signers([gameClient])
       .rpc();
@@ -256,10 +372,21 @@ describe("zk-games-solana", () => {
 
     assert(gameData.player2, "Player2 did not join the game");
 
+    // Confirm the vault holds right amount
+    let vaultBalance = (
+      await anchor.getProvider().connection.getTokenAccountBalance(vault)
+    ).value.amount;
+
+    assert(
+      parseInt(vaultBalance) == MIN_AMOUNT.mul(new BN(2)).toNumber(),
+      "Vault balance is wrong"
+    );
+
     // we need to increase our max CU for verification
     let ix = anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
       units: 400000,
     });
+
     // Player1 complete the game where player 1 wins
     let completeIx = await program.methods
       .completeRpsBasic({
@@ -274,6 +401,9 @@ describe("zk-games-solana", () => {
         player2: player2Pda,
         player2RpsBasicPda,
         gameClient: gameClientPda,
+        usdcMint,
+        manager: managerPda,
+        vault,
       })
       .signers([gameClient])
       .instruction();
@@ -318,6 +448,40 @@ describe("zk-games-solana", () => {
     assert(
       player2RpsBasicData.totalChoices[0].cmp(new BN(1)) === 0,
       "Player2 chose choice 0"
+    );
+
+    // Vault balance should be zero because we took everything out
+    let newVaultBalance = (
+      await anchor.getProvider().connection.getTokenAccountBalance(vault)
+    ).value.amount;
+
+    assert(
+      parseInt(newVaultBalance) == 0,
+      "Vault balance is not 0 after complete game"
+    );
+
+    // Player1 is the winner, so he should have more then the initial balance
+    let player1AtaBalanace = (
+      await anchor
+        .getProvider()
+        .connection.getTokenAccountBalance(player1PdaAta)
+    ).value.amount;
+
+    assert(
+      parseInt(player1AtaBalanace) > INIT_PLAYER_BAL.toNumber(),
+      "Player1 balance is incorrect"
+    );
+
+    // Player2 lost, so he should have less then initial balance
+    let player2AtaBalanace = (
+      await anchor
+        .getProvider()
+        .connection.getTokenAccountBalance(player2PdaAta)
+    ).value.amount;
+
+    assert(
+      parseInt(player2AtaBalanace) < INIT_PLAYER_BAL.toNumber(),
+      "Player1 balance is incorrect"
     );
   });
 });

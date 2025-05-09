@@ -81,7 +81,7 @@ pub struct CancelRpsBasic<'info> {
     system_program: Program<'info, System>,
 }
 
-impl<'info> CancelRpsBasic<'info> {
+impl CancelRpsBasic<'_> {
     pub fn cancel_rps_basic(&mut self) -> Result<()> {
         let game = &self.rps_basic_game;
 

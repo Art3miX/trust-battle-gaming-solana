@@ -81,9 +81,16 @@ pub struct JoinRpsBasic<'info> {
     system_program: Program<'info, System>,
 }
 
-impl<'info> JoinRpsBasic<'info> {
+impl JoinRpsBasic<'_> {
     pub fn join_rps_basic(&mut self, join_game_data: JoinRpsBasicData) -> Result<()> {
         let game = &mut self.rps_basic_game;
+
+        let player2_pda_seeds = &[
+            "player".as_bytes(),
+            self.player2.username.as_bytes(),
+            &[self.player2.bump],
+        ];
+        let player2_pda_seeds = &[&player2_pda_seeds[..]];
 
         let cpi_accounts = TransferChecked {
             mint: self.usdc_mint.to_account_info(),
@@ -92,7 +99,7 @@ impl<'info> JoinRpsBasic<'info> {
             authority: self.player2.to_account_info(),
         };
         let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, player2_pda_seeds);
         transfer_checked(cpi_context, game.amount, self.usdc_mint.decimals)?;
 
         game.player2 = Some(Player2Info {

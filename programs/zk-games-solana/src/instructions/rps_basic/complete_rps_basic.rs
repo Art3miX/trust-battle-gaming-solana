@@ -33,7 +33,7 @@ pub struct CompleteRpsBasic<'info> {
         constraint = rps_basic_game.player2.is_some() @ MyError::RpsBasicGameNotJoined,
         constraint = player2.key() == rps_basic_game.player2.as_ref().unwrap().key @ MyError::RpsBasicPlayer2Mismatch,
     )]
-    pub rps_basic_game: Account<'info, RpsBasicGame>,
+    pub rps_basic_game: Box<Account<'info, RpsBasicGame>>,
     #[account(
         seeds = [
             "player".as_bytes(),
@@ -50,7 +50,7 @@ pub struct CompleteRpsBasic<'info> {
         ],
         bump = player1_rps_basic.bump
     )]
-    pub player1_rps_basic: Account<'info, RpsBasicPlayer>,
+    pub player1_rps_basic: Box<Account<'info, RpsBasicPlayer>>,
     #[account(
         mut,
         associated_token::mint = manager.usdc_mint,
@@ -73,7 +73,7 @@ pub struct CompleteRpsBasic<'info> {
         ],
         bump = player2_rps_basic.bump
     )]
-    pub player2_rps_basic: Account<'info, RpsBasicPlayer>,
+    pub player2_rps_basic: Box<Account<'info, RpsBasicPlayer>>,
     #[account(
         mut,
         associated_token::mint = manager.usdc_mint,
@@ -120,11 +120,8 @@ pub struct CompleteRpsBasic<'info> {
     system_program: Program<'info, System>,
 }
 
-impl<'info> CompleteRpsBasic<'info> {
-    pub fn complete_rps_basic(
-        &mut self,
-        complete_game_data: CompleteRpsBasicData,
-    ) -> Result<()> {
+impl CompleteRpsBasic<'_> {
+    pub fn complete_rps_basic(&mut self, complete_game_data: CompleteRpsBasicData) -> Result<()> {
         let vk = sp1_solana::GROTH16_VK_4_0_0_RC3_BYTES;
         let game = &self.rps_basic_game;
 
@@ -141,7 +138,7 @@ impl<'info> CompleteRpsBasic<'info> {
         verify_proof(
             &complete_game_data.proof,
             &public_public,
-            &VK_RPS_BASIC_COMPLETE,
+            VK_RPS_BASIC_COMPLETE,
             vk,
         )
         .map_err(|x| {
@@ -169,6 +166,9 @@ impl<'info> CompleteRpsBasic<'info> {
             self.manager.platform_fee,
         );
 
+        let manager_pda_seeds = &["manager".as_bytes(), &[self.manager.bump]];
+        let manager_pda_seeds = &[&manager_pda_seeds[..]];
+
         // Transfer platform fee
         let cpi_accounts = TransferChecked {
             mint: self.usdc_mint.to_account_info(),
@@ -177,7 +177,7 @@ impl<'info> CompleteRpsBasic<'info> {
             authority: self.manager.to_account_info(),
         };
         let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
         transfer_checked(cpi_context, platform_amount, self.usdc_mint.decimals)?;
 
         // Transfer client fee
@@ -188,7 +188,7 @@ impl<'info> CompleteRpsBasic<'info> {
             authority: self.manager.to_account_info(),
         };
         let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
         transfer_checked(cpi_context, client_amount, self.usdc_mint.decimals)?;
 
         match game_result {
@@ -201,7 +201,8 @@ impl<'info> CompleteRpsBasic<'info> {
                     authority: self.manager.to_account_info(),
                 };
                 let cpi_program = self.token_program.to_account_info();
-                let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+                let cpi_context =
+                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
                 transfer_checked(cpi_context, winning_amount, self.usdc_mint.decimals)?;
 
                 player1_rps.add_win(player1_choice);
@@ -216,7 +217,8 @@ impl<'info> CompleteRpsBasic<'info> {
                     authority: self.manager.to_account_info(),
                 };
                 let cpi_program = self.token_program.to_account_info();
-                let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+                let cpi_context =
+                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
                 transfer_checked(cpi_context, winning_amount, self.usdc_mint.decimals)?;
 
                 player1_rps.add_lose(player1_choice);
@@ -236,7 +238,8 @@ impl<'info> CompleteRpsBasic<'info> {
                     authority: self.manager.to_account_info(),
                 };
                 let cpi_program = self.token_program.to_account_info();
-                let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+                let cpi_context =
+                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
                 transfer_checked(cpi_context, split_amount, self.usdc_mint.decimals)?;
 
                 let cpi_accounts = TransferChecked {
@@ -246,7 +249,8 @@ impl<'info> CompleteRpsBasic<'info> {
                     authority: self.manager.to_account_info(),
                 };
                 let cpi_program = self.token_program.to_account_info();
-                let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+                let cpi_context =
+                    CpiContext::new_with_signer(cpi_program, cpi_accounts, manager_pda_seeds);
                 transfer_checked(cpi_context, split_amount, self.usdc_mint.decimals)?;
 
                 player1_rps.add_draw(player1_choice);

@@ -15,11 +15,11 @@ pub struct Player2Info {
 #[account]
 #[derive(InitSpace)]
 pub struct RpsBasicGame {
-    pub id: u64,
-    pub amount: u64,
+    pub game_client: Pubkey,
     pub player1: Player1Info,
     pub player2: Option<Player2Info>,
+    pub id: u64,
+    pub amount: u64,
     pub timeout: Option<i64>,
-    pub game_client: Pubkey,
     pub bump: u8,
 }

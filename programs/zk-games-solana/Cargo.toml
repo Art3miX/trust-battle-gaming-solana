@@ -21,3 +21,4 @@ anchor-lang    = { version = "=0.31.0", features = ["init-if-needed"] }
 anchor-spl     = "=0.31.0"
 sp1-solana     = { git = "https://github.com/succinctlabs/sp1-solana" }
 zk-games-types = { git = "https://github.com/Art3miX/zkgames-rps", package = "zk-games-types" }
+bytemuck       = { version = "1.20.0", features = ["min_const_generics"] }

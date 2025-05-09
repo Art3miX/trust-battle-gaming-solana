@@ -31,6 +31,7 @@ pub struct InitRpsBasic<'info> {
     )]
     pub rps_basic_game: Account<'info, RpsBasicGame>,
     #[account(
+        mut,
         seeds=[
             "player".as_bytes(),
             player1.username.as_bytes()
@@ -45,6 +46,7 @@ pub struct InitRpsBasic<'info> {
     )]
     pub player1_ata: InterfaceAccount<'info, TokenAccount>,
     #[account(
+        mut,
         seeds=[
             "game_client".as_bytes(),
             &game_client.signer.key().to_bytes()
@@ -72,18 +74,22 @@ pub struct InitRpsBasic<'info> {
     system_program: Program<'info, System>,
 }
 
-impl<'info> InitRpsBasic<'info> {
+impl InitRpsBasic<'_> {
     pub fn init_rps_basic(&mut self, init_game_data: InitRpsBasicData, bump: u8) -> Result<()> {
         let decimals = self.usdc_mint.decimals;
 
         // Check amount is above minimum
         require!(
-            init_game_data.amount
-                >= 1_u64
-                    .checked_mul(decimals as u64)
-                    .expect("Minimum amount overflow"),
+            init_game_data.amount >= 10_u64.pow(decimals as u32),
             MyError::RpsBasicAmountTooLow
         );
+
+        let player1_pda_seeds = &[
+            "player".as_bytes(),
+            self.player1.username.as_bytes(),
+            &[self.player1.bump],
+        ];
+        let player1_pda_seeds = &[&player1_pda_seeds[..]];
 
         let cpi_accounts = TransferChecked {
             mint: self.usdc_mint.to_account_info(),
@@ -92,7 +98,7 @@ impl<'info> InitRpsBasic<'info> {
             authority: self.player1.to_account_info(),
         };
         let cpi_program = self.token_program.to_account_info();
-        let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
+        let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, player1_pda_seeds);
         transfer_checked(cpi_context, init_game_data.amount, decimals)?;
 
         self.rps_basic_game.set_inner(RpsBasicGame {
