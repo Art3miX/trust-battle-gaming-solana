@@ -7,6 +7,7 @@ pub struct RpsBasicPlayer {
     pub total_draws: u64,
     pub total_wins: u64,
     pub total_losses: u64,
+    pub total_cancel: u64,
     pub total_choices: [u64; 3],
     pub bump: u8,
 }
@@ -30,5 +31,9 @@ impl RpsBasicPlayer {
     pub fn add_draw(&mut self, choice: u8) {
         self.add_game(choice);
         self.total_draws += 1;
+    }
+
+    pub fn add_cancel(&mut self) {
+        self.total_cancel += 1;
     }
 }

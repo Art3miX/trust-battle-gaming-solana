@@ -122,7 +122,7 @@ pub struct CompleteRpsBasic<'info> {
 
 impl<'info> CompleteRpsBasic<'info> {
     pub fn complete_rps_basic(
-        &'info mut self,
+        &mut self,
         complete_game_data: CompleteRpsBasicData,
     ) -> Result<()> {
         let vk = sp1_solana::GROTH16_VK_4_0_0_RC3_BYTES;

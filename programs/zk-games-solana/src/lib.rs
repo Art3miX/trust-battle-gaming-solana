@@ -22,10 +22,6 @@ const VK_RPS_BASIC_COMPLETE: &str =
 
 #[program]
 pub mod zk_games_solana {
-    use sp1_solana::verify_proof;
-
-    use crate::errors::MyError;
-
     use super::*;
 
     pub fn init(ctx: Context<Init>, init_data: InitData) -> Result<()> {
@@ -78,59 +74,12 @@ pub mod zk_games_solana {
 
     pub fn complete_rps_basic(
         ctx: Context<CompleteRpsBasic>,
-        complete_rps_basic_data: CompleteRpsBasicData,
+        complete_game_data: CompleteRpsBasicData,
     ) -> Result<()> {
-        let vk = sp1_solana::GROTH16_VK_4_0_0_RC3_BYTES;
-        let game = &ctx.accounts.rps_basic_game;
+        ctx.accounts.complete_rps_basic(complete_game_data)
+    }
 
-        // Get public input for verification
-        let public_public: Vec<u8> = zk_games_types::RpsBasicPublic {
-            client_pubkey: ctx.accounts.game_client.key().to_string(),
-            game_id: game.id,
-            choice_hash: game.player1.choice_hash,
-            choice: complete_rps_basic_data.player1_choice,
-        }
-        .into();
-
-        msg!("{:?}", ctx.accounts.game_client.key().to_string());
-        msg!("{:?}", game.id);
-        msg!("{:?}", game.player1.choice_hash);
-        msg!("{:?}", complete_rps_basic_data.player1_choice);
-
-        // Verify proof
-        verify_proof(
-            &complete_rps_basic_data.proof,
-            &public_public,
-            &VK_RPS_BASIC_COMPLETE,
-            vk,
-        )
-        .map_err(|x| {
-            msg!("{:?}", x);
-            MyError::RpsBasicProofVerify
-        })?;
-
-        let player1_rps = &mut ctx.accounts.player1_rps_basic;
-        let player2_rps = &mut ctx.accounts.player2_rps_basic;
-
-        let player1_choice = complete_rps_basic_data.player1_choice;
-        let player2_choice = game.player2.clone().unwrap().choice;
-
-        let game_result = calculate_result(player1_choice, player2_choice);
-
-        match game_result {
-            GameResult::Player1 => {
-                player1_rps.add_win(player1_choice);
-                player2_rps.add_lose(player2_choice);
-            }
-            GameResult::Player2 => {
-                player1_rps.add_lose(player1_choice);
-                player2_rps.add_win(player2_choice);
-            }
-            GameResult::Draw => {
-                player1_rps.add_draw(player1_choice);
-                player2_rps.add_draw(player2_choice);
-            }
-        }
-        Ok(())
+    pub fn cancel_rps_basic(ctx: Context<CancelRpsBasic>) -> Result<()> {
+        ctx.accounts.cancel_rps_basic()
     }
 }

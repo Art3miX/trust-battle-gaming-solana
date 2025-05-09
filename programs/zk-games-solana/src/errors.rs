@@ -25,4 +25,7 @@ pub enum MyError {
 
     #[msg("Amount is too low")]
     RpsBasicAmountTooLow,
+
+    #[msg("Game is in progress")]
+    RpsBasicGameInProgress,
 }
