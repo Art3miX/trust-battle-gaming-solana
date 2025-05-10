@@ -9,7 +9,7 @@ pub mod state;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("2ky84E3Znacsztj8PcLz4fAMtrGJPdTnZVmC64Tq9KgK");
+declare_id!("BkGSQDjUxXzLrzfDoyMyURuVwfBc8p7AYaFE1wnQwrMu");
 
 // Replace with admin pubkey
 const ADMIN_PUBKEY: Pubkey = pubkey!("3xoJZkhxuzKpKATL7UhskTA17uBuEnMeuLAqhovETHg4");
@@ -21,7 +21,7 @@ const VK_RPS_BASIC_COMPLETE: &str =
     "0x00c4cf1292d6730be2cfdebe7a064a26bd09db12a6f5a547a46db8e72c72acd8";
 
 #[program]
-pub mod zk_games_solana {
+pub mod trust_battle_gaming_solana {
     use super::*;
 
     pub fn init(ctx: Context<Init>, init_data: InitData) -> Result<()> {

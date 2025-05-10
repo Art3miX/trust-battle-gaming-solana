@@ -1,9 +1,9 @@
-# ZK Games program
+# TrustBattle Gaming program
 This is a POC program that showcase playing a simple RPS (Rock Paper Scissors) game using our platform
 
 # Key elements
 
-## ZK Games platform
+## TrustBattle Gaming platform
 
 Our platform is the trust layer between players and game clients, it allows for 2 key factors:
 
@@ -75,5 +75,5 @@ The game existence and result is verified and recorded publicly allowing for end
 * __Public ELO rating:__ Making the ELO rating public and decentralized allows any entity to use it, even for players the entity "doesn't know".  
 For example, players can switch game clients and retain their ELO rating.  
 Another good example is tournament organizers can use this ELO rating as a trusted source for matchmaking or gate-keeping.
-* __Statistics:__ Key statistics of players can be recorded publicly as a trusted source allowing players to flex their results.
+* __Statistics:__ Key statistics of players can be recorded publicly as a trusted source allowing players to flex their results or other players to study their opponents.
 

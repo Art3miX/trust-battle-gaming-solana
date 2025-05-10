@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-zk_games_solana = "2ky84E3Znacsztj8PcLz4fAMtrGJPdTnZVmC64Tq9KgK"
+zk_games_solana = "BkGSQDjUxXzLrzfDoyMyURuVwfBc8p7AYaFE1wnQwrMu"
 
 [registry]
 url = "https://api.apr.dev"

@@ -146,9 +146,6 @@ impl<'info> CompleteRpsBasic<'info> {
             MyError::RpsBasicProofVerify
         })?;
 
-        // let player1_rps = &mut self.player1_rps_basic;
-        // let player2_rps = &mut self.player2_rps_basic;
-
         let player1_choice = complete_game_data.player1_choice;
         let player2_choice = game
             .player2

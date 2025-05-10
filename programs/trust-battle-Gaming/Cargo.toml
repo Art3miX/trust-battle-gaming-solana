@@ -1,12 +1,12 @@
 [package]
-name        = "zk-games-solana"
+name        = "trust-battle-gaming-solana"
 version     = "0.1.0"
-description = "Created with Anchor"
+description = "Solana program POC for TrustBattle Gaming platform"
 edition     = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name       = "zk_games_solana"
+name       = "trust_battle_gaming_solana"
 
 [features]
 default        = []

@@ -1,7 +1,6 @@
-import {publicKey} from "@coral-xyz/anchor/dist/cjs/utils";
 import * as anchor from "@coral-xyz/anchor";
 import {BN, Program} from "@coral-xyz/anchor";
-import {ZkGamesSolana} from "../target/types/zk_games_solana";
+import {TrustBattleGamingSolana} from "../target/types/trust_battle_gaming_solana";
 import {
   Keypair,
   LAMPORTS_PER_SOL,
@@ -13,7 +12,6 @@ import * as bip39 from "bip39";
 import {assert} from "chai";
 import {createHash} from "crypto";
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   createMint,
   getOrCreateAssociatedTokenAccount,
   mintTo,
@@ -33,8 +31,8 @@ const TEST_SECRET = [
 ];
 // Test login hash for the above secret
 const TEST_LOGIN_HASH = [
-  71, 236, 31, 38, 239, 68, 192, 36, 80, 51, 192, 143, 249, 216, 6, 119, 129,
-  152, 181, 144, 140, 225, 51, 127, 84, 202, 222, 235, 116, 153, 137, 44,
+  68, 90, 177, 66, 217, 224, 89, 180, 231, 30, 113, 127, 192, 169, 222, 169,
+  131, 220, 241, 199, 203, 39, 101, 47, 11, 37, 211, 129, 184, 56, 212, 103,
 ];
 
 // Test secret for player2
@@ -49,32 +47,33 @@ const TEST_LOGIN_HASH2 = [
 ];
 
 const PROOF_P1_G0_C1 = [
-  17, 182, 160, 157, 43, 175, 136, 58, 48, 193, 74, 163, 254, 240, 246, 192,
-  232, 39, 85, 193, 73, 210, 168, 248, 231, 91, 238, 41, 228, 107, 138, 41, 248,
-  183, 221, 33, 40, 201, 41, 80, 175, 212, 139, 195, 225, 200, 119, 37, 139,
-  248, 238, 166, 152, 68, 151, 54, 12, 24, 25, 164, 32, 79, 112, 126, 190, 1,
-  18, 113, 27, 173, 111, 189, 251, 223, 196, 153, 156, 239, 185, 82, 18, 151,
-  110, 122, 12, 171, 219, 80, 61, 15, 191, 118, 141, 186, 251, 138, 151, 169, 3,
-  180, 26, 217, 220, 152, 97, 64, 177, 47, 73, 39, 50, 17, 6, 116, 3, 255, 239,
-  198, 8, 113, 72, 18, 88, 154, 16, 89, 126, 2, 129, 49, 239, 143, 39, 164, 55,
-  57, 186, 202, 83, 105, 18, 115, 9, 13, 47, 162, 169, 204, 213, 153, 153, 178,
-  130, 77, 90, 70, 200, 210, 46, 82, 78, 213, 146, 94, 1, 232, 57, 187, 239, 52,
-  129, 58, 236, 104, 77, 159, 2, 247, 128, 79, 178, 66, 116, 17, 206, 96, 149,
-  194, 121, 195, 75, 66, 66, 32, 226, 45, 23, 11, 207, 76, 59, 95, 124, 65, 131,
-  31, 183, 187, 152, 151, 220, 21, 147, 228, 137, 167, 187, 192, 45, 191, 58,
-  147, 20, 56, 113, 193, 182, 97, 22, 35, 63, 7, 133, 212, 242, 104, 12, 242,
-  93, 11, 201, 206, 144, 115, 47, 44, 85, 65, 180, 114, 137, 70, 255, 139, 142,
-  5, 134, 204, 248, 141,
+  17, 182, 160, 157, 22, 31, 19, 241, 147, 99, 0, 89, 142, 8, 247, 197, 187,
+  124, 192, 4, 119, 231, 138, 222, 119, 164, 8, 43, 169, 183, 0, 16, 116, 45,
+  41, 241, 3, 124, 115, 32, 234, 16, 208, 137, 198, 151, 182, 241, 149, 176,
+  193, 244, 26, 200, 155, 230, 79, 244, 161, 76, 7, 23, 44, 215, 115, 225, 15,
+  128, 30, 227, 176, 112, 246, 222, 222, 199, 92, 196, 125, 106, 184, 46, 162,
+  232, 25, 97, 49, 137, 186, 185, 219, 162, 179, 236, 195, 79, 100, 95, 108, 98,
+  23, 171, 73, 115, 76, 63, 28, 167, 23, 195, 60, 122, 52, 18, 140, 228, 37,
+  108, 67, 104, 82, 29, 192, 242, 120, 133, 201, 57, 141, 79, 48, 198, 40, 222,
+  118, 139, 6, 153, 82, 91, 236, 13, 77, 132, 226, 93, 188, 202, 7, 52, 162, 35,
+  2, 48, 37, 193, 118, 133, 90, 84, 142, 242, 52, 200, 11, 153, 127, 156, 50,
+  115, 116, 51, 181, 162, 117, 123, 124, 30, 177, 20, 249, 229, 196, 78, 67,
+  232, 57, 227, 171, 24, 87, 237, 27, 218, 122, 20, 46, 137, 49, 147, 62, 154,
+  151, 122, 235, 6, 63, 157, 151, 33, 9, 234, 151, 209, 86, 148, 152, 252, 33,
+  147, 92, 82, 167, 150, 240, 190, 104, 80, 37, 194, 39, 227, 56, 14, 37, 157,
+  17, 247, 101, 94, 179, 47, 69, 143, 83, 40, 2, 252, 23, 76, 54, 9, 254, 40,
+  15, 226, 34, 212, 52, 44,
 ];
 
 const MIN_AMOUNT = new BN(1_000_000);
 const INIT_PLAYER_BAL = MIN_AMOUNT.mul(new BN(5));
 
-describe("zk-games-solana", () => {
+describe("trust-battle-gaming-solana", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.zkGamesSolana as Program<ZkGamesSolana>;
+  const program = anchor.workspace
+    .TrustBattleGamingSolana as Program<TrustBattleGamingSolana>;
   const adminSeed = bip39.mnemonicToSeedSync(TEST_SEED, "1234");
   const admin = Keypair.fromSeed(adminSeed.subarray(0, 32));
   const gameClientSeed = bip39.mnemonicToSeedSync(TEST_SEED, "12345");
@@ -518,7 +517,7 @@ describe("zk-games-solana", () => {
   });
 
   it("Cancel game", async () => {
-    let gameId = new BN(0);
+    let gameId = new BN(1);
     let player1Choice = 1;
 
     let player1PdaAtaBalanaceInit = parseInt(
